@@ -1,3 +1,6 @@
+//一个可以和微信交互的小demo，可以和微信公众号玩石头剪刀布
+
+//设置端口号为9529
 var PORT = 9529;
 var http = require('http');
 var https = require('https');
@@ -12,6 +15,7 @@ var m_result;//0平局 1玩家赢 2服务器赢
 
 
 var reJSON;
+//自己的服务器核实是否通过微信公众号的验证
 function checkSignature(params,token)
 {
 	var key =[token,params.timestamp,params.nonce].sort().join('');
@@ -21,28 +25,34 @@ function checkSignature(params,token)
 	return sha1.digest('hex')==params.signature;
 }
 
+//创建一个http服务
 var server = http.createServer(function(request,response)
 {
 	var query = require('url').parse(request.url).query;
 	var params = qs.parse(query);
 	
 	//console.log(params);
-	//console.log("token-->",TOKEN);
 	
+	//console.log("token-->",TOKEN);
+	//进行 token验证，只需进行一次即可
 	// if(checkSignature(params,TOKEN)){
 		// response.end(params.echostr);
 	// }else{
 		// response.end('signature fial');
 	// }
-	
+	//若验证失败则返回失败信息
 	 if(!checkSignature(params,TOKEN)){
 		 response.end('signature fial');
 		 //return;
 	 }
+	 //若是get请求，则直接返回数据
 	 if(request.method=='GET') {
 		 response.end(params.echostr);
-	 }else{
+	 }
+	 //若是其他请求，这里默认是post请求
+	 else{
 		 var postdata="";
+		 //监听返回数据，并存储在postdata中
 		 request.addListener("data",function(postchunk){
 			 postdata+=postchunk;
 		 });
@@ -53,7 +63,7 @@ var server = http.createServer(function(request,response)
 			 // response.end('success');
 		 // });
 		 
-		     //获取到了POST数据
+		     //获取到了POST数据，并将其转为json格式进行处理
 		request.addListener("end",function(){
 		var parseString = require('xml2js').parseString;
 
@@ -61,17 +71,23 @@ var server = http.createServer(function(request,response)
         if(!err){
           //我们将XML数据通过xml2js模块(npm install xml2js)解析成json格式
           console.log(result)
+		  //获取从微信处发来的用户名
 		  m_from_user_name=result.xml.FromUserName;
-		  //console.log(result.xml.FromUserName);
+		  
+			//获取从微信处发来的内容
 		   m_content=result.xml.Content;
+		   
+		   //获取从微信处发来的数据格式
 		   m_type=result.xml.MsgType;
 		   
 		   console.log('from_user_name:'+m_from_user_name+'\n');
 		   console.log('content:'+m_content+'\n');
 		   console.log('type:'+m_type+'\n');
+		   
+		  //若发来的是文本格式，则进行处理
 		   if(m_type=='text')
 		   {
-			   //0.剪刀 1.石头 2.布
+			   //v是服务器选择的出拳 0.剪刀 1.石头 2.布
 			   if(m_content=='scssors'||m_content=='scs')
 			   {
 				  var v=parseInt(Math.random()*3);
@@ -81,6 +97,8 @@ var server = http.createServer(function(request,response)
 				  m_result=2;
 			  	else if(v==2)
 				  m_result=1;
+			  
+			  //将猜拳后的结果和 将服务器的选择 传入to_user 中
 			  to_user(m_result,v);
 			   }
 			   else if(m_content=='stone'||m_content=='sto')
@@ -112,17 +130,17 @@ var server = http.createServer(function(request,response)
     });
 	 } 
 });
-
+//设置监听端口，并进行监听
 server.listen(PORT);
 console.log("Server runing at port:"+PORT+".");
 
-
+//将结果和服务器的猜拳选择通过微信平台返回给用户
 function to_user(result,choice)
 {
 	console.log('result:'+result+',choice:'+choice);
-var result_content;
-var choice_content;
-switch(result)
+	var result_content;
+	var choice_content;
+	switch(result)
 {
 	case 0:result_content='we draw!';
 	break;
@@ -131,7 +149,7 @@ switch(result)
 	case 2:result_content='you lost!';
 	break;
 }
-switch(choice)
+	switch(choice)
 {
 	case 0:choice_content='scssors';
 	break;
@@ -140,8 +158,9 @@ switch(choice)
 	case 2:choice_content='paper';
 	break;
 }
-console.log('My choice is '+choice_content+',so '+result_content);
-reJSON = {
+	console.log('My choice is '+choice_content+',so '+result_content);
+	//根据微信平台的要求设置返回的json格式数据
+	reJSON = {
     "touser":m_from_user_name,
     "msgtype":"text",
     "text":
@@ -151,7 +170,10 @@ reJSON = {
 }
 
 var post_str = new Buffer(JSON.stringify(reJSON));
+//获取token
 access_token=readAccessToken();
+
+//设置post请求参数
 var post_options={
 	host:'api.weixin.qq.com',
 	port:'443',
@@ -162,6 +184,8 @@ var post_options={
         'Content-Length': post_str.length
 	}
 };
+
+//对微信平台进行post请求
 var post_req = https.request(post_options,function(response){
 	var responseText=[];
 	var size=0;
@@ -175,10 +199,11 @@ var post_req = https.request(post_options,function(response){
 	});
 });
 
+//对于前面设置请求和json数据进行发送
 post_req.write(post_str);
 post_req.end();
 }
-
+//从上级文件中获取token数据
 function readAccessToken()
 {
 	var data = fs.readFileSync('../access_token.txt', 'utf8');

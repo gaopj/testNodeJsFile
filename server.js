@@ -1,3 +1,5 @@
+//将本机作为一个服务器进行测试
+
 const http = require('http');
 
 const hostname = '127.0.0.1';

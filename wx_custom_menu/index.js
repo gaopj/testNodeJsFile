@@ -2,7 +2,10 @@
 var fs = require('fs');
 //var access_token='6jB7ATsfw9AmgNYQXNX7uqaGTc4RctORnsuhgXusY_PMTbugisD6rgkzO_yk3HEwXB7u3X3Cj6E9Ke8hrgBBiqEfZMoz-zd_HL8J5l-3rnpCLpkANKCehY5oG4EGRAj9LLYbADAEER'
 
+//获取token
 var access_token=readAccessToken();
+
+//编写微信平台要求的JSON数据
 var menu = {
     "button": [
         {
@@ -63,11 +66,14 @@ var menu = {
     ]
 };
 
+//将编写好的json数据进行格式转化转化成json格式并存在缓存中
 var post_str = new Buffer(JSON.stringify(menu));
 //var post_str = JSON.stringify(menu);
 
 console.log(post_str.toString());
 console.log(post_str.length);
+
+//对微信平台的post请求进行参数配置
 var post_options={
 	host:'api.weixin.qq.com',
 	port:'443',
@@ -79,6 +85,7 @@ var post_options={
 	}
 };
 
+//设置请求，请求并对返回进行打印
 var post_req = https.request(post_options,function(response){
 	var responseText=[];
 	var size=0;
@@ -92,10 +99,13 @@ var post_req = https.request(post_options,function(response){
 	});
 });
 
+//开始请求
 post_req.write(post_str);
+
+//结束请求
 post_req.end();
 
-
+//获取token
 function readAccessToken()
 {
 	var data = fs.readFileSync('../access_token.txt', 'utf8');

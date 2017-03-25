@@ -1,3 +1,4 @@
+//nodejs 语法测试
 "use strict"
 
 function Student(n,e,a)
