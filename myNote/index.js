@@ -34,7 +34,7 @@ app.use(bodyParser.urlencoded({extended:true}));
 app.use(session({
 	secret:'1234',
 	name:'mynote',
-	cookie:{maxAge:1000*60*20},//设置session的保存时间为20分钟
+	cookie:{maxAge:1000*60*60*24*7},//设置session的保存时间为一星期
 	resave:false,
 	saveUninitialized:true
 }));
@@ -83,12 +83,13 @@ app.get('/detail/:_id',function(req,res){
 		});
 });
 
+var registererror='';
 app.get('/register',function(req,res){
 	console.log('register注册！');
 	res.render('register',{
 		user:req.session.user,
 		title:'注册',
-		err:'error'
+		err:registererror
 	});
 });
 
@@ -102,17 +103,34 @@ app.post('/register',function(req,res){
 	//检查输入的用户名是否为空，使用trim去掉两端空格
 	if(username.trim().length==0){
 		console.log('username can not null 用户名不能为空！');
+		registererror='用户名不能为空！'
 		return res.redirect('/register');
 	}
 
+	 var regexUserName = /^[a-zA-Z0-9_]*$/;
+
+	if(!username.trim().match(regexUserName)||username.trim().length<3||username.trim().length>20){
+		registererror='用户名必须是字母数字，且长度大于3，小于20';
+		console.log('username length need more then 3 ,less then 30 and need a-z 0-9 A-Z');
+		return res.redirect('/register');
+	}
 	//检查输入的密码是否为空，使用trim去掉两端空格
 	if(password.trim().length==0){
+		registererror='密码不能为空！';
 		console.log('password can not null 密码不能为空！');
+		return res.redirect('/register');
+	}
+	/^(?=.*?[A-Za-z]+)(?=.*?[0-9]+)(?=.*?[A-Z]).*$/
+	var regexPassWord = /^(?=.*?[A-Za-z]+)(?=.*?[0-9]+)(?=.*?[A-Z]).*$/;
+	if(!password.trim().match(regexPassWord)||password.trim().length<6){
+		registererror = '密码必须有数字大小写字母，且大于6位';
+		console.log('password length need more then 6 , at least  one a-z, one 0-9 ,one A-Z');
 		return res.redirect('/register');
 	}
 
 	//检查两次输入的密码是否一致
 	if(password!=passwordRepeat){
+		registererror = '两次输入密码不一致';
 		console.log('password is not same 两次输入密码不一致');
 		return res.redirect('/register');
 	}
@@ -124,6 +142,7 @@ app.post('/register',function(req,res){
 			return res.redirect('/register');
 		}
 		if(user){
+			registererror ='用户名已经存在';
 			console.log('username has been 用户名已经存在');
 			return res.redirect('/register');			
 		}
@@ -148,11 +167,13 @@ app.post('/register',function(req,res){
 	});
 });
 
+var loginerror='';
 app.get('/login',function(req,res){
 	console.log('login 登录');
 	res.render('login',{
 		user:req.session.user,
-		title:'登录'
+		title:'登录',
+		errortext:loginerror
 	});
 });
 app.post('/login',function(req,res){
@@ -165,6 +186,7 @@ app.post('/login',function(req,res){
 			return res.redirect('/login');
 		}
 		if(!user){
+			loginerror = '用户名不存在或密码错误！';
 			console.log('user does not exist');
 			return res.redirect('/login');
 		}
@@ -173,6 +195,7 @@ app.post('/login',function(req,res){
 		var md5 = crypto.createHash('md5'),
 			md5password=md5.update(password).digest('hex');
 		if(user.password!==md5password){
+			loginerror = '用户名不存在或密码错误！';
 			console.log('password error!');
 			return res.redirect('/login');
 		}
