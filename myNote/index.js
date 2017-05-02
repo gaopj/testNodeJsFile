@@ -55,7 +55,8 @@ app.get('/',function(req,res)
 		res.render('index',{
 		title:'首页',
 		user:req.session.user,
-		notes:allNotes
+		notes:allNotes,
+		moment:moment
 		});
 	});
 		// res.render('index',{
